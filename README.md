@@ -72,7 +72,6 @@ auto t  = precise_float{0.0};
 auto y  = precise_float{1.0};
 auto dy = precise_float{};
 auto 𝛿t = precise_float{0.01};
-auto count = 0;
 while (abs(1.0 - t) > precise_float{1e-99}) {
     auto remaining_time = 1.0 - t;
     auto current_step   = (abs(𝛿t) < abs(remaining_time)) ? 𝛿t : remaining_time;
@@ -80,7 +79,6 @@ while (abs(1.0 - t) > precise_float{1e-99}) {
     auto yscal = abs(y) + abs(dy * current_step);
     auto [new_step, success] = bulirsch_stoer(y, dy, t, current_step, 1e-90, yscal, rhs);
     if (success) {
-        ++count;
         t += current_step;
     }
     𝛿t = new_step;
