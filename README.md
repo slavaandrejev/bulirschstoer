@@ -1,3 +1,5 @@
+<video src="https://github.com/user-attachments/assets/c2921990-e442-4b06-8503-c437d57327a8" autoplay loop muted playsinline width="100%"></video>
+
 # Bulirsch-Stoer ODE Integrator
 
 A modern, high-precision header-only C++ implementation of the Bulirsch-Stoer
