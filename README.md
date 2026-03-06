@@ -25,6 +25,10 @@ Boost Bulirsch-Stoer error = 2.884019502824533e-10, derivative evaluations = 319
 ## Basic usage
 
 ```cpp
+#include <bulirschstoer.h>
+
+// ...
+
 // Logistic equation:  y' = y(1 - y)
 auto rhs = [](double, double y, double &dy) {
     dy = y * (1.0 - y);
