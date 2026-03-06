@@ -46,7 +46,7 @@ auto dy = 0.0;
 auto 𝛿t = 0.5;
 while (std::abs(target_time - t) > 1e-14 * target_time) {
     auto remaining_time = target_time - t;
-    auto current_step   = (abs(𝛿t) < abs(remaining_time)) ? 𝛿t : remaining_time;
+    auto current_step   = (std::abs(𝛿t) < std::abs(remaining_time)) ? 𝛿t : remaining_time;
     rhs(0, y, dy);
     auto yscal = std::abs(y) + std::abs(dy * current_step);
     auto [new_step, success] = bulirsch_stoer(y, dy, t, current_step, 1e-12, yscal, rhs);
