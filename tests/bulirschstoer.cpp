@@ -457,4 +457,35 @@ BOOST_AUTO_TEST_CASE(ExponentialGrowthMP)
     BOOST_CHECK(y.str(88, std::ios_base::fixed) == "2.7182818284590452353602874713526624977572470936999595749669676277240766303535475945713822");
 }
 
+// -------------------------------------------------------------------
+// 14. y' = 4 / (1 + t^2),  y(0) = 0
+//     High precision 𝜋 calculation
+// -------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(PiMP)
+{
+    using namespace boost::multiprecision;
+    using precise_float = number<mpfr_float_backend<100, allocate_stack>>;
+
+    auto rhs = [](auto t, auto &&y, auto &&dy) { dy = 4 / (1 + t * t); };
+
+    auto bulirsch_stoer = BulirschStoer<1, 30, precise_float>{0.94};
+
+    auto t  = precise_float{0.0};
+    auto y  = precise_float{0.0};
+    auto dy = precise_float{};
+    auto 𝛿t = precise_float{0.01};
+    while (abs(1.0 - t) > precise_float{1e-99}) {
+        auto remaining_time = 1.0 - t;
+        auto current_step   = (abs(𝛿t) < abs(remaining_time)) ? 𝛿t : remaining_time;
+        rhs(t, y, dy);
+        auto yscal = abs(y) + abs(dy * current_step);
+        auto [new_step, success] = bulirsch_stoer(y, dy, t, current_step, 1e-90, yscal, rhs);
+        if (success) {
+            t += current_step;
+        }
+        𝛿t = new_step;
+    }
+    BOOST_CHECK(y.str(88, std::ios_base::fixed) == "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348");
+}
+
 BOOST_AUTO_TEST_SUITE_END()
