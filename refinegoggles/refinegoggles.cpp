@@ -151,9 +151,23 @@ auto J(const Eigen::Matrix<precise_float, 3, 1> &x,
 }
 
 int main (int argc, char *argv[]) {
+    // The following initial conditions correspond to a periodic solution of the
+    // three-body problem known as "goggles". The parameters were taken from
+    // "Three Classes of Newtonian Three-Body Planar Periodic Orbits" by Milovan
+    // Šuvakov and V. Dmitrašinović (Phys. Rev. Lett. 110, 114301).
+    //
+    // Since the paper gave only 6 digits, these parameters were refined using
+    // the same Bulirsch-Stoer integrator with multiprecision numbers.
+    //
+    // This orbit was chosen because it is highly unstable and accumulates
+    // errors very quickly, which makes it a perfect test for the quality of an
+    // ODE solver.
+
+    // The refined parameters as the result of running this program are:
     // dx1: 0.08330007185049746989952757537419570164158552456772599092773952197771478216838449
     // dy1: 0.12788925551976670647803067663151709988133809414715842404997985790915880608904909
     //   T: 10.46484952592071984539928042851131704896726187045825559329773067489333993596154994
+
     auto dx1 = precise_float{0.08330};
     auto dy1 = precise_float{0.12789};
     auto T   = precise_float{10.4668};

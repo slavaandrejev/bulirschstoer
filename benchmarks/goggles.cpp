@@ -123,6 +123,14 @@ struct boost::numeric::odeint::algebra_dispatcher<Ys> {
 int main (int argc, char *argv[]) {
     auto bulirsch_stoer = BulirschStoer<12, 12>{};
 
+    // The following initial conditions correspond to a periodic solution of the
+    // three-body problem known as "goggles". The parameters were taken from
+    // "Three Classes of Newtonian Three-Body Planar Periodic Orbits" by Milovan
+    // Šuvakov and V. Dmitrašinović (Phys. Rev. Lett. 110, 114301).
+
+    // This orbit is highly unstable and accumulates errors very quickly, which
+    // makes it a perfect test for the quality of an ODE solver.
+
     auto constexpr dx1 = 0.0833000718504974698995276;
     auto constexpr dy1 = 0.1278892555197667064780307;
     auto constexpr T   = 10.464849525920719845399;

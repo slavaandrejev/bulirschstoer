@@ -1,4 +1,8 @@
-<video src="https://github.com/user-attachments/assets/c2921990-e442-4b06-8503-c437d57327a8" autoplay loop muted playsinline width="100%"></video>
+https://github.com/user-attachments/assets/c2921990-e442-4b06-8503-c437d57327a8
+
+"goggles" periodic solution of the three-body problem from "Three Classes of
+    Newtonian Three-Body Planar Periodic Orbits" by Milovan Šuvakov and V.
+    Dmitrašinović (Phys. Rev. Lett. 110, 114301).
 
 # Bulirsch-Stoer ODE Integrator
 
