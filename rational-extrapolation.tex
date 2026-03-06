@@ -1,0 +1,279 @@
+\documentclass[11pt, twoside, twocolumn, paper = letter]{scrartcl}
+
+\usepackage[autopunct]{csquotes}
+\usepackage{fontspec}
+\usepackage{microtype}
+\usepackage{unicode-math}
+\usepackage{lualatex-math}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{luacolor}
+\usepackage{scrlayer-scrpage}
+\usepackage{tikz}
+
+\usetikzlibrary{calc, math}
+
+\setmainfont{STIX Two Text}
+\setmathfont{STIX Two Math}
+\setmonofont{Libertinus Mono}[Scale = MatchLowercase]
+\setsansfont{Libertinus Sans}[Scale = MatchLowercase]
+
+\usepackage{polyglossia}
+\setdefaultlanguage[variant = american]{english}
+\setotherlanguages{german}
+\usepackage[
+    sorting  = none
+  , language = autobib
+  , autolang = langname
+  ]{biblatex}
+
+\def\papertitle{Rational extrapolation for the Bulirsch--Stoer algorithm}
+
+\addbibresource{rational-extrapolation.bib}
+
+\hypersetup{
+    unicode      = true
+  , pdftoolbar   = true
+  , pdfmenubar   = true
+  , pdffitwindow = false
+  , pdftitle     = {\papertitle}
+  , pdfnewwindow = true
+  , colorlinks   = true
+  , linkcolor    = linkcolor
+  , citecolor    = zzttqq
+  , filecolor    = xdxdff
+  , urlcolor     = uququq
+}
+
+\definecolor{linkcolor}{RGB}{98, 130, 41}
+\definecolor{uququq}{rgb}{0.6,  0.2,  0}
+\definecolor{zzttqq}{rgb}{0.6,  0.2,  0}
+\definecolor{xdxdff}{rgb}{0.49, 0.49, 1}
+\definecolor{titlecolor}{RGB}{69, 69, 73}
+\definecolor{titlerulescolor}{RGB}{167, 184, 137}
+
+\KOMAoptions{
+    DIV      = 16
+  , fontsize = 11
+  , BCOR     = 8mm
+  , pagesize = luatex
+  }
+
+\addtokomafont{title}{\color{titlecolor}}
+\addtokomafont{pagehead}{\normalfont}
+
+\title{
+    \parbox[t]{\linewidth}{%
+        \centering%
+        \kern-\baselineskip%
+        \kern-\ht\strutbox%
+        {\color{titlerulescolor}\rule{\linewidth}{1pt}}\par%
+        \kern-\dimexpr\baselineskip-\ht\strutbox\relax%
+        \kern1ex%
+        \papertitle\par%
+        \kern1ex%
+        \kern-.7\dimexpr\ht\strutbox+\dp\strutbox\relax%
+        {\color{titlerulescolor}\rule{\linewidth}{1pt}}%
+    }%
+}
+\date{}
+
+\pagestyle{scrheadings}
+\renewcommand*{\titlepagestyle}{scrheadings}
+
+\begin{document}
+
+\maketitle
+
+\section{Rational extrapolation}
+
+The base recurrence for rational extrapolation is given by Stoer and Bulirsch
+\cite{BulirschStoer1964}. To avoid loss of significance from subtractive cancellation during
+floating-point evaluation, we can apply the same difference technique they use for polynomial
+extrapolation \cite{BulirschStoerBook}. A similar derivation can be found in \cite{NumRecipesInC}.
+
+Let's assume we have $n + 1$ pairs of numbers $(x_i, f_i)$, $i = 0, \ldots, n$. We denote
+$\tilde{T}_{ik}$ interpolation performed using pairs $i - k, i - k + 1, \ldots, i$. Neville's
+algorithm for calculating rational interpolation $\tilde{T}_{nn}$ consists of applying these
+recurrent equations:
+\begin{equation*}
+    \begin{gathered}
+        \tilde{T}_{i0} = f_i
+        \text{,}\quad
+        \tilde{T}_{i,-1} = 0
+        \text{,}\\
+        \tilde{T}_{ik}
+          = \tilde{T}_{i, k-1}
+          + \frac{\tilde{T}_{i, k - 1} - \tilde{T}_{i - 1, k - 1}}
+                 {
+                     \frac{x - x_{i - k}}{x - x_i}
+                     \left[
+                         1- \frac{\tilde{T}_{i, k - 1} - \tilde{T}_{i - 1, k - 1}}
+                                 {\tilde{T}_{i, k - 1} - \tilde{T}_{i - 1, k - 2}}
+                     \right] - 1
+                 }
+        \text{.}
+    \end{gathered}
+\end{equation*}
+For multistep integration we need $T_{ik} = \tilde{T}_{ik}(0)$, and also the rational function
+depends on $h^2$ (rather than $h$), where $h$ is the current step. Therefore, the recurrent
+equations take this form:
+\begin{equation*}
+    T_{ik}
+      = T_{i, k-1}
+      + \frac{T_{i, k - 1} - T_{i - 1, k - 1}}
+             {
+                 \left[\frac{h_{i - k}}{h_i}\right]^2
+                 \left[
+                     1- \frac{T_{i, k - 1} - T_{i - 1, k - 1}}
+                             {T_{i, k - 1} - T_{i - 1, k - 2}}
+                 \right] - 1
+             }
+    \text{.}
+\end{equation*}
+We can rewrite it as
+\begin{equation*}
+    T_{ik} = T_{i, k-1} + Q_{ik}
+    \text{,}
+\end{equation*}
+by introducing the following small differences:
+\begin{equation*}
+    \begin{gathered}
+        D_{ik} = T_{ik} - T_{i - 1, k - 1}
+        \text{,}\\
+        Q_{ik} = T_{ik} - T_{i, k - 1}
+        \text{.}
+    \end{gathered}
+\end{equation*}
+Using an obvious identity
+\begin{equation*}
+    D_{ik} - Q_{ik} = D_{i, k - 1} - Q_{i - 1, k - 1}
+    \text{,}
+\end{equation*}
+we can deduce the recurrent equations for $D_{ik}$ and $Q_{ik}$:
+\begin{equation*}
+    \begin{gathered}
+        Q_{ik}
+          = D_{i, k - 1}
+            \frac{D_{i, k - 1} - Q_{i - 1, k - 1}}
+                 {
+                    \left[\frac{h_{i - k}}{h_i}\right]^2 Q_{i - 1, k - 1} - D_{i, k - 1}
+                 }
+        \text{,}\\
+        D_{ik}
+          = \left[\frac{h_{i - k}}{h_i}\right]^2 Q_{i - 1, k - 1}
+            \frac
+            {
+                D_{i, k - 1} - Q_{i - 1, k - 1}
+            }
+            {
+                \left[\frac{h_{i - k}}{h_i}\right]^2 Q_{i - 1, k - 1} - D_{i, k - 1}
+            }
+        \text{.}
+    \end{gathered}
+\end{equation*}
+Usually, $h_i$ have form $H / n_i$, where, for example, $n_i = 2, 4, 6, 8, 12, 16, \ldots$, $n_i = 2
+n_{i - 2}$ for $i \geqslant 3$. Then the result doesn't depend on $H$, and we can write
+\begin{equation*}
+    \begin{gathered}
+        Q_{i0} = D_{i0} = f_i
+        \text{,}\\
+        Q_{ik}
+          = D_{i, k - 1}
+            \frac{D_{i, k - 1} - Q_{i - 1, k - 1}}
+                 {
+                    \left[\frac{n_i}{n_{i - k}}\right]^2 Q_{i - 1, k - 1} - D_{i, k - 1}
+                 }
+        \text{,}\\
+        D_{ik}
+          = \left[\frac{n_i}{n_{i - k}}\right]^2 Q_{i - 1, k - 1}
+            \frac
+            {
+                D_{i, k - 1} - Q_{i - 1, k - 1}
+            }
+            {
+                \left[\frac{n_i}{n_{i - k}}\right]^2 Q_{i - 1, k - 1} - D_{i, k - 1}
+            }
+        \text{.}
+    \end{gathered}
+\end{equation*}
+Finally,
+\begin{equation*}
+    T_{nn} = \sum_{k = 0}^n{Q_{nk}}
+    \text{.}
+\end{equation*}
+To estimate an error, we introduce $U_{ik}$
+\begin{equation*}
+    U_{ik} = 2T_{i + 1, k} - T_{ik}
+    \text{,}
+\end{equation*}
+which nears to the limit from the other side. Using definitions for $Q_{ik}$ and $D_{ik}$ we can
+deduce
+\begin{equation*}
+    \begin{split}
+        U_{i-1, k - 1} &= 2 T_{i, k - 1} - T_{i - 1, k - 1}\\
+                       &= -2 Q_{ik} + 2 T_{ik} + D_{ik} - T_{ik}\\
+                       &= T_{ik} + D_{ik} - 2 Q_{ik}\\
+                       &= D_{ik} + T_{i - 1, k - 1} + D_{ik} - 2 Q_{ik}\\
+                       &= T_{i - 1, k - 1} + 2\left(D_{ik} - Q_{ik}\right)\text{.}
+    \end{split}
+\end{equation*}
+Therefore, an error estimate is
+\begin{equation*}
+    \varepsilon_{i - 1, k - 1}
+      = \frac{1}{2}\left(T_{i-1, k - 1} - U_{i - 1, k - 1}\right) = Q_{ik} - D_{ik}
+    \text{.}
+\end{equation*}
+Note that for the adaptive order and step control, Deuflhard suggested using $Q_{ik}$
+\cite{Deuflhard1983}.
+
+\section{Polynomial extrapolation for fallback}
+
+The denominator in the recurrent expressions for the rational extrapolation can infinitely approach
+zero. Stoer and Bulirsch in their book \cite{BulirschStoerBook} simply dismiss it by saying it never
+happens in practice. However, it does happen in practice, and in this case, the entire integration
+scheme blows up. To prevent this disaster from affecting the integration, we can switch the
+corresponding $Q_{ik}$ and $D_{ik}$ to polynomial extrapolation. It works because every new row in
+the extrapolation tableau is a refinement of the previous row. If we switch a refinement to a
+different algorithm, it still will refine the previous values. For reference, below are the
+corresponding recurrent relations for the polynomial extrapolation from \cite{BulirschStoerBook}.
+
+Let's assume we have $n + 1$ pairs of numbers $(x_i, f_i)$, $i = 0, \ldots, n$. We denote
+$\tilde{T}_{ik}$ interpolation performed using pairs $i - k, i - k + 1, \ldots, i$. Neville's
+algorithm for calculating polynomial interpolation $\tilde{T}_{nn}$ consists of applying these
+recurrent equations:
+\begin{equation*}
+    \begin{gathered}
+        \tilde{T}_{i0} = f_i
+        \text{,}\\
+        \tilde{T}_{ik}
+          = \tilde{T}_{i, k-1}
+          + \frac{\tilde{T}_{i, k - 1} - \tilde{T}_{i - 1, k - 1}}
+                 {
+                     \frac{x - x_{i - k}}{x - x_i} - 1
+                 }
+        \text{.}
+    \end{gathered}
+\end{equation*}
+Following the same derivation, we will get
+\begin{equation*}
+    \begin{aligned}
+        Q_{i0} &= D_{i0} = f_i
+        \text{,}\\
+        Q_{ik}
+         &= \frac{n_{i - k}^2}{n_i^2 - n_{i - k}^2}\left(D_{i, k - 1} - Q_{i - 1, k - 1}\right)
+        \text{,}\\
+        D_{ik}
+         &= \frac{n_{i}^2}{n_i^2 - n_{i - k}^2}\left(D_{i, k - 1} - Q_{i - 1, k - 1}\right)
+        \text{.}
+    \end{aligned}
+\end{equation*}
+Similarly,
+\begin{equation*}
+    T_{nn} = \sum_{k = 0}^n{Q_{nk}}
+    \text{.}
+\end{equation*}
+
+\printbibliography
+
+\end{document}

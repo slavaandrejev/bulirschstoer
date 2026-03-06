@@ -1,0 +1,12 @@
+option('tests',
+       type : 'boolean',
+       value : false,
+       description : 'build tests')
+option('benchmarks',
+       type : 'boolean',
+       value : false,
+       description : 'build benchmarks')
+option('three-body-animation',
+       type : 'boolean',
+       value : false,
+       description : 'build benchmarks')

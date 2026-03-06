@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="/">
+        <file compressed="true">trace-vs.glsl</file>
+        <file compressed="true">trace-fs.glsl</file>
+        <file compressed="true">trace-gs.glsl</file>
+        <file compressed="true">ball-vs.glsl</file>
+        <file compressed="true">ball-fs.glsl</file>
+        <file compressed="true">ball-gs.glsl</file>
+        <file compressed="true" preprocess="xml-stripblanks">three-body-animation-win.ui</file>
+    </gresource>
+</gresources>
