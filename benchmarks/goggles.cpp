@@ -32,7 +32,6 @@
 
 #include <Eigen/Dense>
 
-#include <fmt/color.h>
 #include <fmt/format.h>
 
 #include <gsl/gsl_errno.h>
@@ -45,23 +44,6 @@
 using Ys = Eigen::Array<double, 12, 1>;
 
 namespace rs = ranges;
-
-inline double operator - (const timespec &t1, const timespec &t2) {
-    auto s  = int64_t{t1.tv_sec  - t2.tv_sec};
-    auto ns = int64_t{t1.tv_nsec - t2.tv_nsec};
-    if (0 <= s) {
-        if (0 > ns) {
-            --s;
-            ns += 1'000'000'000;
-        }
-    } else {
-        if (0 < ns) {
-            ++s;
-            ns -= 1'000'000'000;
-        }
-    }
-    return s + ns * 1e-9;
-}
 
 struct stid {
     static auto constexpr r1  = 0;
@@ -162,10 +144,6 @@ int main (int argc, char *argv[]) {
     y0(stid::dy3) = -2 * y0(stid::dy1);
 
     {
-        auto start_time  = timespec{};
-        auto finish_time = timespec{};
-        clock_gettime(CLOCK_MONOTONIC, &start_time);
-
         auto t       = 0.0;
         auto y       = Ys{y0};
         auto dy      = Ys{};
@@ -183,15 +161,6 @@ int main (int argc, char *argv[]) {
                 t += current_step;
             }
             𝛿t = new_step;
-        }
-        clock_gettime(CLOCK_MONOTONIC, &finish_time);
-        auto elapsed_time = finish_time - start_time;
-        if (1.0 > elapsed_time) {
-            fmt::print(fmt::fg(fmt::color::medium_purple) | fmt::emphasis::bold,
-                       "Elapsed time: {:.3g} ms\n", 1000 * elapsed_time);
-        } else {
-            fmt::print(fmt::fg(fmt::color::medium_purple) | fmt::emphasis::bold,
-                       "Elapsed time: {:.6g} s\n", elapsed_time);
         }
 
         fmt::print("Bulirsch-Stoer error = {}, derivative evaluations = {}\n", (y - y0).matrix().norm(), n_evals);
@@ -217,24 +186,12 @@ int main (int argc, char *argv[]) {
 
         rs::copy(y0, &y[0]);
 
-        auto start_time  = timespec{};
-        auto finish_time = timespec{};
-        clock_gettime(CLOCK_MONOTONIC, &start_time);
         while (abs(T - t) > 1e-14 * T) {
             auto status = gsl_odeiv2_evolve_apply(evolve.get(), con.get(), step.get(), &sys, &t, T, &𝛿t, &y[0]);
             if (GSL_SUCCESS != status) {
                 fmt::print("GSL failed with status: {}\n", status);
                 break;
             }
-        }
-        clock_gettime(CLOCK_MONOTONIC, &finish_time);
-        auto elapsed_time = finish_time - start_time;
-        if (1.0 > elapsed_time) {
-            fmt::print(fmt::fg(fmt::color::medium_purple) | fmt::emphasis::bold,
-                       "Elapsed time: {:.3g} ms\n", 1000 * elapsed_time);
-        } else {
-            fmt::print(fmt::fg(fmt::color::medium_purple) | fmt::emphasis::bold,
-                       "Elapsed time: {:.6g} s\n", elapsed_time);
         }
 
         auto y_mapped = Eigen::Map<Ys>(&y[0]);
@@ -251,9 +208,6 @@ int main (int argc, char *argv[]) {
         auto 𝛿t      = 0.01;
         auto n_evals = 0;
 
-        auto start_time  = timespec{};
-        auto finish_time = timespec{};
-        clock_gettime(CLOCK_MONOTONIC, &start_time);
         while (abs(T - t) > 1e-14 * T) {
             auto remaining_time = T - t;
             𝛿t = (abs(𝛿t) < abs(remaining_time)) ? 𝛿t : remaining_time;
@@ -264,15 +218,6 @@ int main (int argc, char *argv[]) {
             if (boost::numeric::odeint::success == result) {
                 y = yout;
             }
-        }
-        clock_gettime(CLOCK_MONOTONIC, &finish_time);
-        auto elapsed_time = finish_time - start_time;
-        if (1.0 > elapsed_time) {
-            fmt::print(fmt::fg(fmt::color::medium_purple) | fmt::emphasis::bold,
-                       "Elapsed time: {:.3g} ms\n", 1000 * elapsed_time);
-        } else {
-            fmt::print(fmt::fg(fmt::color::medium_purple) | fmt::emphasis::bold,
-                       "Elapsed time: {:.6g} s\n", elapsed_time);
         }
 
         fmt::print("Boost Bulirsch-Stoer error = {}, derivative evaluations = {}\n", (y - y0).matrix().norm(), n_evals);
