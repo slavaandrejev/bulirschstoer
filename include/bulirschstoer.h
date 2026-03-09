@@ -45,7 +45,8 @@ template <typename T>
 concept RealNumber = std::numeric_limits<T>::is_specialized &&
                      !std::numeric_limits<T>::is_integer;
 
-template <size_t _Nvars, size_t _MaxOrder, RealNumber T = double>
+template <int _Nvars, int _MaxOrder, RealNumber T = double>
+    requires (0 < _Nvars && 1 < _MaxOrder)
 class BulirschStoer {
 private:
     using Ys = Eigen::Array<T, _Nvars, 1>;
@@ -115,7 +116,7 @@ public:
         auto k_converged   = 0;
 
         i = 0; // reset the extrapolation tableau
-        for (auto k = size_t{}; MaxOrder > k; ++k) {
+        for (auto k = 0; MaxOrder > k; ++k) {
             midpoint(y, dy, x, H, ni[k], nexty, std::forward<Derivs>(derivs));
             // Add a row to the extrapolation tableau. Since midpoint returns
             // 𝛿y, we extrapolating not the full state by a 𝛿 to the current

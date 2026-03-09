@@ -179,8 +179,8 @@ private:
     std::array<int, 3> buf_heads    = {};
     std::array<int, 3> buf_tails    = {};
 
-    static constexpr std::array<size_t, 3> buf_capacity = {2000, 2000, 2000};
-    static constexpr std::array<size_t, 3> max_th_dist  = {buf_capacity[0] - 3, buf_capacity[1] - 3, buf_capacity[2] - 3};
+    static constexpr std::array<int, 3> buf_capacity = {2000, 2000, 2000};
+    static constexpr std::array<int, 3> max_th_dist  = {buf_capacity[0] - 3, buf_capacity[1] - 3, buf_capacity[2] - 3};
 
     static constexpr std::array<int, 3> xs_ids = {stid::x1, stid::x2, stid::x3};
     static constexpr std::array<int, 3> ys_ids = {stid::y1, stid::y2, stid::y3};
