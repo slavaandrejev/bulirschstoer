@@ -67,7 +67,7 @@ public:
         return register_type_<OpenGLRender>("OpenGLRender", 0, {}, {}, {});
     }
 
-    void on_start_btn_clicked(Gtk::Button);
+    void toggle_animation();
 
     auto signal_physics_stepped() {
         return physics_stepped;

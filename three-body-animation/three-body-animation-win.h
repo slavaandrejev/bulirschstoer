@@ -44,6 +44,8 @@ public:
 private:
     void physics_stepped(double time, double energy);
 
+    bool animating = false;
+
     gi::ref_ptr<OpenGLRender> gl_area;
     Gtk::Button start_btn;
     Gtk::Entry  time_label;

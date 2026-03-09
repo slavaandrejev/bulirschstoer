@@ -44,7 +44,16 @@ MainWindow::MainWindow(Gtk::ApplicationWindow cobj, Gtk::Builder builder)
     time_label   = builder.get_object<Gtk::Entry>("time_label");
     energy_label = builder.get_object<Gtk::Entry>("energy_label");
 
-    start_btn.signal_clicked().connect(sigc::mem_fun(*gl_area, &OpenGLRender::on_start_btn_clicked));
+    start_btn.signal_clicked().connect([&](Gtk::Button) {
+        gl_area->toggle_animation();
+        if (animating) {
+            start_btn.set_label("Start");
+            animating = false;
+        } else {
+            start_btn.set_label("Stop");
+            animating = true;
+        }
+    });
     gl_area->signal_physics_stepped().connect(sigc::mem_fun(*this, &MainWindow::physics_stepped));
 }
 

@@ -71,8 +71,13 @@ OpenGLRender::OpenGLRender(const InitData &id)
     e0 = energy(y);
 }
 
-void OpenGLRender::on_start_btn_clicked(Gtk::Button) {
-    tick_callback_id = add_tick_callback(sigc::mem_fun(*this, &OpenGLRender::timer_event));
+void OpenGLRender::toggle_animation() {
+    if (0 != tick_callback_id) {
+        remove_tick_callback(tick_callback_id);
+        tick_callback_id = 0;
+    } else {
+        tick_callback_id = add_tick_callback(sigc::mem_fun(*this, &OpenGLRender::timer_event));
+    }
 }
 
 auto constexpr trace_pnt_size = 3 * sizeof(float);
@@ -92,9 +97,9 @@ bool OpenGLRender::render_(Gdk::GLContext context) noexcept {
     ball_shader->set("transform", transform);
     trace_shader->use();
 
-    if (0 != tick_callback_id) {
-        trace_shader->set("current_time", float(t * 1000));
-        for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
+    trace_shader->set("current_time", float(t * 1000));
+    for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
+        if ((buf_heads[i] - buf_tails[i]) > 4 || buf_tails[i] >= buf_heads[i]) {
             trace_shader->set("line_color", line_colors[i]);
             glBindVertexArray(trace_vao[i]);
             if (buf_heads[i] > buf_tails[i]) {
@@ -189,18 +194,25 @@ bool OpenGLRender::timer_event(Gtk::Widget, Gdk::FrameClock frame_clock) {
         start_time = frame_clock.get_frame_time();
         init_trace_buffers();
     } else {
-        auto frame_time = frame_clock.get_frame_time();
-        auto target_t   = 1e-6 * (frame_time - start_time);
+        auto frame_time    = frame_clock.get_frame_time();
+        auto frame         = frame_clock.get_frame_counter();
+        auto prev_timings  = frame_clock.get_timings(frame - 1);
 
-        advance_physics(target_t, [&]() {
-            // let us update trace buffers several times per frame if the
-            // trajectory changes rapidly
-            update_trace_buffers();
-        });
-        physics_stepped(t, std::abs(energy(y) - e0));
+        if (prev_timings) {
+            auto prev_time = prev_timings.get_frame_time();
+            auto 𝛿t        = 1e-6f * (frame_time - prev_time);
+            auto target_t  = t + 𝛿t;
 
-        // the frame is ready to render
-        queue_draw();
+            advance_physics(target_t, [&]() {
+                // let us update trace buffers several times per frame if the
+                // trajectory changes rapidly
+                update_trace_buffers();
+            });
+            physics_stepped(t, std::abs(energy(y) - e0));
+
+            // the frame is ready to render
+            queue_draw();
+        }
     }
 
     return true;
