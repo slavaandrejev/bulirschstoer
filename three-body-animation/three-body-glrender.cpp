@@ -34,6 +34,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <fmt/format.h>
+
 #include "three-body-glrender.h"
 
 using namespace gl;
@@ -65,6 +67,8 @@ OpenGLRender::OpenGLRender(const InitData &id)
     y(stid::dy2) = y(stid::dy1);
     y(stid::dx3) = -2 * y(stid::dx1);
     y(stid::dy3) = -2 * y(stid::dy1);
+
+    e0 = energy(y);
 }
 
 void OpenGLRender::on_start_btn_clicked(Gtk::Button) {
@@ -189,8 +193,11 @@ bool OpenGLRender::timer_event(Gtk::Widget, Gdk::FrameClock frame_clock) {
         auto target_t   = 1e-6 * (frame_time - start_time);
 
         advance_physics(target_t, [&]() {
+            // let us update trace buffers several times per frame if the
+            // trajectory changes rapidly
             update_trace_buffers();
         });
+        physics_stepped(t, std::abs(energy(y) - e0));
 
         // the frame is ready to render
         queue_draw();

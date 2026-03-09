@@ -36,6 +36,8 @@
 
 #include <Eigen/Dense>
 
+#include <sigc++/signal.h>
+
 #include <bulirschstoer.h>
 #include <gnamespaces.h>
 
@@ -46,6 +48,11 @@ class OpenGLRender : public GlBoundGlArea
 {
     friend struct WidgetClassDef::TypeInitData;
     friend struct GLAreaClassDef::TypeInitData;
+private:
+    using type_signal_physics_stepped = sigc::signal<void(double, double)>;
+
+    type_signal_physics_stepped physics_stepped;
+
 public:
     // We need this constructor only to satisfy the requirement of
     // `Gtk::Builder::get_object_derived`. This class is constructed by
@@ -61,6 +68,10 @@ public:
     }
 
     void on_start_btn_clicked(Gtk::Button);
+
+    auto signal_physics_stepped() {
+        return physics_stepped;
+    }
 
 private:
     bool render_(Gdk::GLContext context) noexcept override;
@@ -94,6 +105,25 @@ private:
         dy.segment<2>(stid::dr3) = -r3mr1 - r3mr2;
     }
 
+    static
+    auto energy(const Ys &y) {
+        auto r1 = y.segment<2>(stid::r1);
+        auto r2 = y.segment<2>(stid::r2);
+        auto r3 = y.segment<2>(stid::r3);
+
+        auto r12 = (r2 - r1).matrix().norm();
+        auto r23 = (r2 - r3).matrix().norm();
+        auto r31 = (r3 - r1).matrix().norm();
+
+        auto v1 = y.segment<2>(stid::dx1);
+        auto v2 = y.segment<2>(stid::dx2);
+        auto v3 = y.segment<2>(stid::dx3);
+
+        return (v1.matrix().squaredNorm() +
+                v2.matrix().squaredNorm() +
+                v3.matrix().squaredNorm()) / 2 - (1 / r12 + 1 / r23 + 1 / r31);
+    }
+
     struct stid {
         static auto constexpr r1  = 0;
         static auto constexpr r2  = 2;
@@ -118,7 +148,8 @@ private:
         static auto constexpr dy3 = 11;
     };
 
-    double t = 0.0;
+    double t  = 0.0;
+    double e0 = 0.0;
     Ys y;
     Ys dy;
 

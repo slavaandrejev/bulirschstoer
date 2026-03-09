@@ -32,10 +32,20 @@
 
 #include <gnamespaces.h>
 
+#include "three-body-glrender.h"
+
 class MainWindow : public Gtk::impl::ApplicationWindowImpl
 {
 public:
     MainWindow(Gtk::ApplicationWindow cobj, Gtk::Builder builder);
 
     static gi::ref_ptr<MainWindow> new_();
+
+private:
+    void physics_stepped(double time, double energy);
+
+    gi::ref_ptr<OpenGLRender> gl_area;
+    Gtk::Button start_btn;
+    Gtk::Entry  time_label;
+    Gtk::Entry  energy_label;
 };
