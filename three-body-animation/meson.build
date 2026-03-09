@@ -1,5 +1,10 @@
-bpc    = find_program('blueprint-compiler')
+bpc = find_program('blueprint-compiler', required: false)
+if not bpc.found()
+    subproject('blueprint-compiler')
+    bpc = find_program('blueprint-compiler')
+endif
 cppgir = find_program('cppgir')
+
 
 fs    = import('fs')
 gnome = import('gnome')

@@ -48,11 +48,15 @@ endif
 eigen_dep = dependency('Eigen3', method: 'cmake', modules: 'Eigen3::Eigen')
 range_dep = dependency('range-v3', method: 'cmake')
 
-if get_option('three-body-animation') or get_option('benchmarks') or get_option('three-body-animation')
-    boost_dep = dependency('boost')
+if get_option('tests') or get_option('benchmarks') or get_option('three-body-animation')
     fmt_dep   = dependency('fmt')
-    gsl_dep   = dependency('gsl')
-    mpfr_dep  = dependency('mpfr')
+    if get_option('benchmarks') or get_option('tests')
+        boost_dep = dependency('boost')
+        mpfr_dep  = dependency('mpfr')
+    endif
+    if get_option('benchmarks')
+        gsl_dep   = dependency('gsl')
+    endif
 endif
 
 if get_option('three-body-animation')
