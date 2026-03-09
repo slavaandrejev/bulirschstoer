@@ -127,20 +127,29 @@ private:
     guint tick_callback_id{};
     bool timer_event(Gtk::Widget, Gdk::FrameClock frame_clock);
 
+    // Place the initial locations to the trace buffers, reset heads and tails.
+    void init_trace_buffers();
+
+    // Inject new locations directly in the GPU memory. Update heads and tails.
+    void update_trace_buffers();
+
+    template <typename Func>
+    void advance_physics(double target_t, Func &&gui_update);
+
     std::unique_ptr<Shader> trace_shader;
     std::unique_ptr<Shader> ball_shader;
 
     std::array<gl::GLuint, 3> trace_vao = {};
-    std::array<gl::GLuint, 3> trace_vbo = {};
+    std::array<gl::GLuint, 3> trace_vbo = {}; // ring buffers to draw traces
 
     std::array<gl::GLuint, 3> ball_vao = {};
     std::array<gl::GLuint, 3> ball_vbo = {};
 
-    std::array<size_t, 3> buf_heads    = {};
-    std::array<size_t, 3> buf_tails    = {};
+    std::array<int, 3> buf_heads    = {};
+    std::array<int, 3> buf_tails    = {};
 
     static constexpr std::array<size_t, 3> buf_capacity = {2000, 2000, 2000};
-    static constexpr std::array<size_t, 3> max_th_dist  = {buf_capacity[0] - 6, buf_capacity[1] - 6, buf_capacity[2] - 6};
+    static constexpr std::array<size_t, 3> max_th_dist  = {buf_capacity[0] - 3, buf_capacity[1] - 3, buf_capacity[2] - 3};
 
     static constexpr std::array<int, 3> xs_ids = {stid::x1, stid::x2, stid::x3};
     static constexpr std::array<int, 3> ys_ids = {stid::y1, stid::y2, stid::y3};

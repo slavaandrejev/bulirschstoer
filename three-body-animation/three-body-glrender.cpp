@@ -93,9 +93,9 @@ bool OpenGLRender::render_(Gdk::GLContext context) noexcept {
         for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
             trace_shader->set("line_color", line_colors[i]);
             glBindVertexArray(trace_vao[i]);
-            if (buf_heads[i] > 3 + buf_tails[i]) {
+            if (buf_heads[i] > buf_tails[i]) {
                 glDrawArrays(GL_LINE_STRIP_ADJACENCY, buf_tails[i], buf_heads[i] - buf_tails[i]);
-            } else if (buf_heads[i] < buf_tails[i]) {
+            } else {
                 glDrawArrays(GL_LINE_STRIP_ADJACENCY, buf_tails[i], buf_capacity[i] - buf_tails[i]);
                 glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, buf_heads[i]);
             }
@@ -183,110 +183,170 @@ void OpenGLRender::unrealize_() noexcept {
 bool OpenGLRender::timer_event(Gtk::Widget, Gdk::FrameClock frame_clock) {
     if (0 > start_time) {
         start_time = frame_clock.get_frame_time();
-
-        for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
-            auto v = std::array<float, 3>{float(y(xs_ids[i])), float(y(ys_ids[i])), 0.0f};
-            glNamedBufferSubData(trace_vbo[i], 0, sizeof(v), &v[0]);
-            glNamedBufferSubData(trace_vbo[i], sizeof(v), sizeof(v), &v[0]);
-
-            buf_heads[i] = 3; // leave space for repeating the second point two times
-            buf_tails[i] = 0;
-        }
+        init_trace_buffers();
     } else {
         auto frame_time = frame_clock.get_frame_time();
         auto target_t   = 1e-6 * (frame_time - start_time);
-        auto 𝛿t         = target_t - t;
 
-        // advance the physics simulation to match the GTK frame time
-        while (std::abs(t - target_t) > 1e-14 * target_t) {
-            auto time_remaining = target_t - t;
-            auto current_step   = (std::abs(𝛿t) < std::abs(time_remaining)) ? 𝛿t : time_remaining;
-            derivs(y, dy);
-            auto yscal = (y.abs() + (dy * 𝛿t).abs()).eval();
-            auto [new_step, success] = bulirsch_stoer(y, dy, t, current_step, 1e-14 / 1.3, yscal, [&](double, const auto &y, auto &dy) {
-                derivs(y, dy);
-            });
-            if (success) {
-                // inject the new coordinates into the VBO ring buffers
-                t += current_step;
-                for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
-                    // v holds 4 floats: [x, y, x, y].
-                    // This pre-packages the actual new point AND the duplicate
-                    // end-cap required by GL_LINE_STRIP_ADJACENCY.
-                    auto v = std::array<float, 6>{float(y(xs_ids[i])), float(y(ys_ids[i])), float(t * 1000)};
-                    auto &tl = buf_tails[i];
-                    auto &hd = buf_heads[i];
-                    // copy points inside GPU memory
-                    auto copy_points = [&](size_t from, size_t to, size_t n) {
-                        glCopyNamedBufferSubData(
-                            trace_vbo[i]
-                          , trace_vbo[i]
-                          , from * trace_pnt_size
-                          , to * trace_pnt_size
-                          , trace_pnt_size * n);
-                    };
-                    // helper to advance the tail while preserving the start-cap context
-                    auto inc_tail = [&]() {
-                        ++tl;
-                        // Copy the new tail coordinate into the slot immediately behind it (tl).
-                        // This guarantees gl_in[0] == gl_in[1] when rendering, forcing the geometry
-                        // shader to draw a clean, flat cut.
-                        copy_points(tl + 1, tl, 1);
-                    };
-                    // contiguous buffer (head is physically ahead of tail)
-                    if (hd > tl) {
-                        if (buf_capacity[i] > hd) {
-                            // normal append: write the point and the duplicate end-cap ahead of it
-                            v[3] = v[0]; v[4] = v[1]; v[5] = v[2];
-                            glNamedBufferSubData(trace_vbo[i], (hd - 1) * trace_pnt_size, 2 * trace_pnt_size, &v[0]);
-                            ++hd;
-                            // if the trace has reached max logical length, pull the tail forward
-                            if (max_th_dist[i] < hd - tl) {
-                                inc_tail();
-                            }
-                        } else {
-                            // HEAD WRAP LOGIC: Head has hit the physical end of the VRAM buffer
-                            // 1. Write the final point to the extreme end of the buffer
-                            glNamedBufferSubData(trace_vbo[i], (hd - 1) * trace_pnt_size, trace_pnt_size, &v[0]);
-                            // 2. Copy the last 3 points to indices 0, 1, 2 at the start of the buffer.
-                            // This bridges the 4-vertex adjacency sliding window across the split.
-                            copy_points(hd - 3, 0, 3);
-                            // 3. Write the actual new point at index 3, and set head to 4
-                            glNamedBufferSubData(trace_vbo[i], 3 * trace_pnt_size, trace_pnt_size, &v[0]);
-                            hd = 4;
-                            // Pull tail forward to maintain logical length
-                            inc_tail();
-                        }
-                    }
-                    // split buffer (head has wrapped and is physically behind tail)
-                    else {
-                        // normal append at the current wrapped head position
-                        v[3] = v[0]; v[4] = v[1]; v[5] = v[2];
-                        glNamedBufferSubData(trace_vbo[i], (hd - 1) * trace_pnt_size, 2 * trace_pnt_size, &v[0]);
-                        ++hd;
-                        // Collision avoidance: tail is pushed forward by head
-                        // pressure. We keep distance 3 between then to retain
-                        // the number of segments when wrap.
-                        if (3 > tl - hd) {
-                            if (buf_capacity[i] - 4 <= tl) {
-                                // 1. Copy the C-2 point into index 0 to mathematically re-establish
-                                // the padded start-cap (p0 == p1) for the new chunk at the beginning.
-                                copy_points(buf_capacity[i] - 2, 0, 1);
-                                // 2. Wrap tail to the beginning of the buffer
-                                tl = 0;
-                            } else {
-                                // normal tail advance
-                                inc_tail();
-                            }
-                        }
-                    }
-                }
-            }
-            𝛿t = new_step;
-        }
+        advance_physics(target_t, [&]() {
+            update_trace_buffers();
+        });
+
         // the frame is ready to render
         queue_draw();
     }
 
     return true;
+}
+
+void OpenGLRender::init_trace_buffers() {
+    for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
+        auto v = std::array<float, 3>{float(y(xs_ids[i])), float(y(ys_ids[i])), float(t * 1000.0)};
+        glNamedBufferSubData(trace_vbo[i], 0, sizeof(v), &v[0]);
+        glNamedBufferSubData(trace_vbo[i], sizeof(v), sizeof(v), &v[0]);
+
+        buf_heads[i] = 3; // leave space for repeating the second point two times
+        buf_tails[i] = 0;
+    }
+}
+
+// The logic of updating the trace ring buffers is quite convoluted because we
+// use GL_LINE_STRIP_ADJACENCY and thus have to keep three imperatives:
+//  (i) The first and the last points have to be duplicated
+// (ii) If the trace wraps to the beginning of the buffer, three last points
+//       have to be repeated
+// These conditions keep the trace without gaps and keep the number of segments
+// constant when we wrap. As the result, the number of segments is the buffer
+// capacity - 6. Below is a couple of graphic examples of the operation. The
+// numbers correspond to point sequence. The buffer capacity is 13.
+//  t              h
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │ 0│ 0│ 1│ 2│ 2│  │  │  │  │  │  │  │  │ Normal operation, just keep adding points.
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+//
+//  t                             h
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │ 0│ 0│ 1│ 2│ 3│ 4│ 5│ 6│ 7│ 7│  │  │  │ Maximum capacity reached. Will move the tail next.
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+//
+//     t                             h
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │  │ 1│ 1│ 2│ 3│ 4│ 5│ 5│ 7│ 8│ 8│  │  │ Moving the tail and head together
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+//
+//           t                             h
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │  │  │  │ 3│ 3│ 4│ 5│ 6│ 7│ 8│ 9│10│10│ The head is ready to wrap.
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+//
+//              th
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │ 9│10│11│11│ 4│ 4│ 5│ 6│ 7│ 8│ 9│10│11│ The head wrapped. Now we will call glDrawArrays twice per buffer.
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+//
+//                 th
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │ 9│10│11│12│12│ 5│ 5│ 6│ 7│ 8│ 9│10│11│ Normal operation, just keep adding points.
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+//
+//                             th
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │ 9│10│11│12│13│14│15│16│16│ 9│ 9│10│11│ The tail is about to wrap.
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+//
+//  t                             h
+// ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+// │10│10│11│12│13│14│15│16│17│17│  │  │  │ The tail wrapped.
+// └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+void OpenGLRender::update_trace_buffers() {
+    for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
+        // v holds 6 floats: [x, y, t, x, y, t].
+        // This pre-packages the actual new point AND the duplicate
+        // end-cap required by GL_LINE_STRIP_ADJACENCY.
+        auto v = std::array<float, 6>{float(y(xs_ids[i])), float(y(ys_ids[i])), float(t * 1000)};
+        auto &tl = buf_tails[i];
+        auto &hd = buf_heads[i];
+        // copy points inside GPU memory
+        auto copy_points = [&](size_t from, size_t to, size_t n) {
+            glCopyNamedBufferSubData(
+                trace_vbo[i]
+              , trace_vbo[i]
+              , from * trace_pnt_size
+              , to * trace_pnt_size
+              , trace_pnt_size * n);
+        };
+        // helper to advance the tail while preserving the start-cap context
+        auto inc_tail = [&]() {
+            ++tl;
+            // Copy the new tail coordinate into the slot immediately behind it (tl).
+            // This guarantees gl_in[0] == gl_in[1] when rendering, forcing the geometry
+            // shader to draw a clean, flat cut.
+            copy_points(tl + 1, tl, 1);
+        };
+        // contiguous buffer (head is physically ahead of tail)
+        if (hd > tl) {
+            if (buf_capacity[i] > hd) {
+                // normal append: write the point and the duplicate end-cap ahead of it
+                v[3] = v[0]; v[4] = v[1]; v[5] = v[2];
+                glNamedBufferSubData(trace_vbo[i], (hd - 1) * trace_pnt_size, 2 * trace_pnt_size, &v[0]);
+                ++hd;
+                // if the trace has reached max logical length, pull the tail forward
+                if (max_th_dist[i] < hd - tl) {
+                    inc_tail();
+                }
+            } else {
+                // HEAD WRAP LOGIC: Head has hit the physical end of the VRAM buffer
+                // 1. Write the final point to the extreme end of the buffer
+                glNamedBufferSubData(trace_vbo[i], (hd - 1) * trace_pnt_size, trace_pnt_size, &v[0]);
+                // 2. Copy the last 3 points to indices 0, 1, 2 at the start of the buffer.
+                // This bridges the 4-vertex adjacency sliding window across the split.
+                copy_points(hd - 3, 0, 3);
+                // 3. Write the actual new point at index 3, and set head to 4
+                glNamedBufferSubData(trace_vbo[i], 3 * trace_pnt_size, trace_pnt_size, &v[0]);
+                hd = 4;
+                // Pull tail forward to maintain logical length
+                inc_tail();
+            }
+        }
+        // split buffer (head has wrapped and is physically at the tail or behind it)
+        else {
+            // normal append at the current wrapped head position
+            v[3] = v[0]; v[4] = v[1]; v[5] = v[2];
+            glNamedBufferSubData(trace_vbo[i], (hd - 1) * trace_pnt_size, 2 * trace_pnt_size, &v[0]);
+            ++hd;
+            // Avoid collision
+            if (0 > tl - hd) {
+                if (buf_capacity[i] - 4 <= tl) {
+                    // 1. Copy the C-2 point into index 0 to mathematically re-establish
+                    // the padded start-cap (p0 == p1) for the new chunk at the beginning.
+                    copy_points(buf_capacity[i] - 2, 0, 1);
+                    // 2. Wrap tail to the beginning of the buffer
+                    tl = 0;
+                } else {
+                    // normal tail advance
+                    inc_tail();
+                }
+            }
+        }
+    }
+}
+
+template <typename Func>
+inline void OpenGLRender::advance_physics(double target_t, Func &&gui_update) {
+    auto 𝛿t = target_t - t;
+
+    while (std::abs(t - target_t) > 1e-14 * target_t) {
+        auto time_remaining = target_t - t;
+        auto current_step   = (std::abs(𝛿t) < std::abs(time_remaining)) ? 𝛿t : time_remaining;
+        derivs(y, dy);
+        auto yscal = (y.abs() + (dy * 𝛿t).abs()).eval();
+        auto [new_step, success] = bulirsch_stoer(y, dy, t, current_step, 1e-14 / 1.3, yscal, [&](double, const auto &y, auto &dy) {
+            derivs(y, dy);
+        });
+        if (success) {
+            t += current_step;
+            gui_update();
+        }
+        𝛿t = new_step;
+    }
 }
