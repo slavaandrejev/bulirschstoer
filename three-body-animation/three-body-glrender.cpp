@@ -230,10 +230,10 @@ void OpenGLRender::init_trace_buffers() {
 }
 
 // The logic of updating the trace ring buffers is quite convoluted because we
-// use GL_LINE_STRIP_ADJACENCY and thus have to keep three imperatives:
+// use GL_LINE_STRIP_ADJACENCY and thus have to keep two imperatives:
 //  (i) The first and the last points have to be duplicated
 // (ii) If the trace wraps to the beginning of the buffer, three last points
-//       have to be repeated
+//      have to be repeated
 // These conditions keep the trace without gaps and keep the number of segments
 // constant when we wrap. As the result, the number of segments is the buffer
 // capacity - 6. Below is a couple of graphic examples of the operation. The
