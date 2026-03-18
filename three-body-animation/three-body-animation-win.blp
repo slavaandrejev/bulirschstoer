@@ -37,14 +37,17 @@ ApplicationWindow main_window {
             margin-bottom: 4;
 
             Label {
-                label: "Time: ";
+                label: "Time:";
+                margin-end: 4;
             }
-            Entry time_label {
-                editable: false;
-                focusable: false;
-                text: "0.0";
-                max-width-chars: 6;
-                xalign: 1.0;
+            Frame {
+                Label time_label {
+                    label: "0.0";
+                    selectable: true;
+                    max-width-chars: 6;
+                    width-chars: 6;
+                    xalign: 1.0;
+                }
             }
             Label {
                 label: "s";
@@ -53,14 +56,17 @@ ApplicationWindow main_window {
 
             Label {
                 margin-start: 12;
-                label: "Energy error: ";
+                margin-end: 4;
+                label: "Energy error:";
             }
-            Entry energy_label {
-                editable: false;
-                focusable: false;
-                text: "0";
-                max-width-chars: 9;
-                xalign: 1.0;
+            Frame {
+                Label energy_label {
+                    label: "0";
+                    selectable: true;
+                    max-width-chars: 9;
+                    width-chars: 9;
+                    xalign: 1.0;
+                }
             }
         }
     }

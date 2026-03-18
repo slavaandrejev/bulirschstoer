@@ -41,8 +41,8 @@ MainWindow::MainWindow(Gtk::ApplicationWindow cobj, Gtk::Builder builder)
 {
     gl_area      = builder.get_object_derived<OpenGLRender>("animation_gl_area");
     start_btn    = builder.get_object<Gtk::Button>("start_btn");
-    time_label   = builder.get_object<Gtk::Entry>("time_label");
-    energy_label = builder.get_object<Gtk::Entry>("energy_label");
+    time_label   = builder.get_object<Gtk::Label>("time_label");
+    energy_label = builder.get_object<Gtk::Label>("energy_label");
 
     start_btn.signal_clicked().connect([&](Gtk::Button) {
         gl_area->toggle_animation();
@@ -67,6 +67,6 @@ gi::ref_ptr<MainWindow> MainWindow::new_() {
 }
 
 void MainWindow::physics_stepped(double time, double energy) {
-    Gtk::Editable(time_label).set_text(std::format("{:.1f}", time));
-    Gtk::Editable(energy_label).set_text(std::format("{:9.3e}", energy));
+    time_label.set_text(std::format("{:.1f}", time));
+    energy_label.set_text(std::format("{:9.3e}", energy));
 }

@@ -48,6 +48,6 @@ private:
 
     gi::ref_ptr<OpenGLRender> gl_area;
     Gtk::Button start_btn;
-    Gtk::Entry  time_label;
-    Gtk::Entry  energy_label;
+    Gtk::Label  time_label;
+    Gtk::Label  energy_label;
 };
