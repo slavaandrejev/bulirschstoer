@@ -4,6 +4,7 @@
 
 namespace GLib {
     using namespace gi::repository::GLib;
+    using namespace gi::repository::GObject;
 }
 namespace Gtk {
     using namespace gi::repository::Gtk;

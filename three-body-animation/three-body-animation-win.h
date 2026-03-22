@@ -14,7 +14,7 @@ public:
     static gi::ref_ptr<MainWindow> new_();
 
 private:
-    void physics_stepped(double time, double energy);
+    void physics_stepped(GLib::Object, double time, double energy);
 
     bool animating = false;
 

@@ -37,7 +37,7 @@ gi::ref_ptr<MainWindow> MainWindow::new_() {
     return gi::ref_ptr<MainWindow>();
 }
 
-void MainWindow::physics_stepped(double time, double energy) {
+void MainWindow::physics_stepped(GLib::Object, double time, double energy) {
     time_label.set_text(std::format("{:.1f}", time));
     energy_label.set_text(std::format("{:9.3e}", energy));
 }

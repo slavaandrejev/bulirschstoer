@@ -8,8 +8,6 @@
 
 #include <Eigen/Dense>
 
-#include <sigc++/signal.h>
-
 #include <bulirschstoer.h>
 #include <gnamespaces.h>
 
@@ -20,11 +18,6 @@ class OpenGLRender : public GlBoundGlArea
 {
     friend struct WidgetClassDef::TypeInitData;
     friend struct GLAreaClassDef::TypeInitData;
-private:
-    using type_signal_physics_stepped = sigc::signal<void(double, double)>;
-
-    type_signal_physics_stepped physics_stepped;
-
 public:
     // We need this constructor only to satisfy the requirement of
     // `Gtk::Builder::get_object_derived`. This class is constructed by
@@ -39,9 +32,11 @@ public:
         return register_type_<OpenGLRender>("OpenGLRender", 0, {}, {}, {});
     }
 
+    gi::signal<void(GLib::Object, double, double)> physics_stepped{this, "physics_stepped"};
+
     void toggle_animation();
 
-    auto signal_physics_stepped() {
+    gi::signal_proxy<void(GLib::Object, double, double)> signal_physics_stepped() {
         return physics_stepped;
     }
 

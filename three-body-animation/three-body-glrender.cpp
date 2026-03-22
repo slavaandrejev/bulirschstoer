@@ -180,7 +180,7 @@ bool OpenGLRender::timer_event(Gtk::Widget, Gdk::FrameClock frame_clock) {
                 // trajectory changes rapidly
                 update_trace_buffers();
             });
-            physics_stepped(t, std::abs(energy(y) - e0));
+            physics_stepped.emit(t, std::abs(energy(y) - e0));
 
             // the frame is ready to render
             queue_draw();
