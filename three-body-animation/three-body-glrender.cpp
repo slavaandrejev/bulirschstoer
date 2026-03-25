@@ -330,7 +330,7 @@ inline void OpenGLRender::advance_physics(double target_t, Func &&gui_update) {
         auto time_remaining = target_t - t;
         auto current_step   = (std::abs(𝛿t) < std::abs(time_remaining)) ? 𝛿t : time_remaining;
         derivs(y, dy);
-        auto yscal = (y.abs() + (dy * 𝛿t).abs()).eval();
+        auto yscal = (y.abs() + (dy * current_step).abs()).eval();
         auto [new_step, success] = bulirsch_stoer(y, dy, t, current_step, 1e-14 / 1.3, yscal, [&](double, const auto &y, auto &dy) {
             derivs(y, dy);
         });
