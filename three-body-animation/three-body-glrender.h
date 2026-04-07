@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <tuple>
 
 #include <glm/vec3.hpp>
 
@@ -32,13 +33,17 @@ public:
         return register_type_<OpenGLRender>("OpenGLRender", 0, {}, {}, {});
     }
 
-    gi::signal<void(GLib::Object, double, double)> physics_stepped{this, "physics_stepped"};
+    gi::signal<void(GLib::Object, double, double, double, double, double)> physics_stepped{this, "physics_stepped"};
 
     void toggle_animation();
 
-    gi::signal_proxy<void(GLib::Object, double, double)> signal_physics_stepped() {
+    gi::signal_proxy<void(GLib::Object, double, double, double, double, double)> signal_physics_stepped() {
         return physics_stepped;
     }
+
+    auto m1_color() const {return line_colors[0]; }
+    auto m2_color() const {return line_colors[1]; }
+    auto m3_color() const {return line_colors[2]; }
 
 private:
     bool render_(Gdk::GLContext context) noexcept override;
@@ -86,9 +91,16 @@ private:
         auto v2 = y.segment<2>(stid::dx2);
         auto v3 = y.segment<2>(stid::dx3);
 
-        return (v1.matrix().squaredNorm() +
-                v2.matrix().squaredNorm() +
-                v3.matrix().squaredNorm()) / 2 - (1 / r12 + 1 / r23 + 1 / r31);
+        auto K1 = v1.matrix().squaredNorm() / 2.0;
+        auto K2 = v2.matrix().squaredNorm() / 2.0;
+        auto K3 = v3.matrix().squaredNorm() / 2.0;
+
+        auto E = (K1 + K2 + K3) - (1.0 / r12 + 1.0 / r23 + 1.0 / r31);
+        auto E1 = K1 - (1.0 / r12 + 1.0 / r31);
+        auto E2 = K2 - (1.0 / r12 + 1.0 / r23);
+        auto E3 = K3 - (1.0 / r31 + 1.0 / r23);
+
+        return std::make_tuple(E, E1, E2, E3);
     }
 
     struct stid {
@@ -131,6 +143,7 @@ private:
     // Inject new locations directly in the GPU memory. Update heads and tails.
     void update_trace_buffers();
 
+    void init_physics();
     template <typename Func>
     void advance_physics(double target_t, Func &&gui_update);
 
@@ -161,7 +174,7 @@ private:
     static constexpr std::array<int, 3> ys_ids = {stid::y1, stid::y2, stid::y3};
 
     std::array<glm::vec3, 3> line_colors = {{
-        {230.0f / 255.0f,  92.0f / 255.0f,  13.0f / 255.0f}
+        {186.0f / 255.0f, 230.0f / 255.0f,  13.0f / 255.0f}
       , { 93.0f / 255.0f, 109.0f / 255.0f, 194.0f / 255.0f}
       , {241.0f / 255.0f, 152.0f / 255.0f,   0.0f / 255.0f}
       }};

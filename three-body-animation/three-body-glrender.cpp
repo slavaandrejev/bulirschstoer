@@ -15,32 +15,7 @@ using namespace gl;
 OpenGLRender::OpenGLRender(const InitData &id)
   : GlBoundGlArea(id, "OpenGLRender")
 {
-    // The following initial conditions correspond to a periodic solution of the
-    // three-body problem known as "goggles". The parameters were taken from
-    // "Three Classes of Newtonian Three-Body Planar Periodic Orbits" by Milovan
-    // Šuvakov and V. Dmitrašinović (Phys. Rev. Lett. 110, 114301).
-    //
-    // Since the paper gave only 6 digits, these parameters were refined using
-    // the same Bulirsch-Stoer integrator with multiprecision numbers (see the
-    // refinegoggles project).
-    //
-    // This orbit was chosen because it is highly unstable and accumulates
-    // errors very quickly, which makes it a perfect test for the quality of an
-    // ODE solver.
-
-    y(stid::x1) = -1;
-    y(stid::x2) = 1;
-    y(stid::x3) = 0;
-    y(stid::y1) = y(stid::y2) = y(stid::y3) = 0;
-
-    y(stid::dx1) = 0.0833000718504974698995;
-    y(stid::dy1) = 0.1278892555197667064780;
-    y(stid::dx2) = y(stid::dx1);
-    y(stid::dy2) = y(stid::dy1);
-    y(stid::dx3) = -2 * y(stid::dx1);
-    y(stid::dy3) = -2 * y(stid::dy1);
-
-    e0 = energy(y);
+    init_physics();
 }
 
 void OpenGLRender::toggle_animation() {
@@ -193,7 +168,13 @@ bool OpenGLRender::timer_event(Gtk::Widget, Gdk::FrameClock frame_clock) {
                 // trajectory changes rapidly
                 update_trace_buffers();
             });
-            physics_stepped.emit(t, std::abs(energy(y) - e0));
+            auto [E, E1, E2, E3] = energy(y);
+            if (0 < E1 || 0 < E2 || 0 < E3) {
+                // One of the bodies was ejected and will never return. Reset animation.
+                init_physics();
+                init_trace_buffers();
+            }
+            physics_stepped.emit(t, std::abs(E - e0), E1, E2, E3);
 
             // the frame is ready to render
             queue_draw();
@@ -333,6 +314,38 @@ void OpenGLRender::update_trace_buffers() {
             }
         }
     }
+}
+
+void OpenGLRender::init_physics() {
+    // The following initial conditions correspond to a periodic solution of the
+    // three-body problem known as "goggles". The parameters were taken from
+    // "Three Classes of Newtonian Three-Body Planar Periodic Orbits" by Milovan
+    // Šuvakov and V. Dmitrašinović (Phys. Rev. Lett. 110, 114301).
+    //
+    // Since the paper gave only 6 digits, these parameters were refined using
+    // the same Bulirsch-Stoer integrator with multiprecision numbers (see the
+    // refinegoggles project).
+    //
+    // This orbit was chosen because it is highly unstable and accumulates
+    // errors very quickly, which makes it a perfect test for the quality of an
+    // ODE solver.
+
+    y(stid::x1) = -1;
+    y(stid::x2) = 1;
+    y(stid::x3) = 0;
+    y(stid::y1) = y(stid::y2) = y(stid::y3) = 0;
+
+    y(stid::dx1) = 0.0833000718504974698995;
+    y(stid::dy1) = 0.1278892555197667064780;
+    y(stid::dx2) = y(stid::dx1);
+    y(stid::dy2) = y(stid::dy1);
+    y(stid::dx3) = -2 * y(stid::dx1);
+    y(stid::dy3) = -2 * y(stid::dy1);
+
+    t = 0;
+
+    auto [E, E1, E2, E3] = energy(y);
+    e0 = E;
 }
 
 template <typename Func>

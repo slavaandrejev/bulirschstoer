@@ -61,10 +61,59 @@ ApplicationWindow main_window {
             }
             Frame {
                 Label energy_label {
-                    label: "0";
+                    label: "0.0";
                     selectable: true;
                     max-width-chars: 9;
                     width-chars: 9;
+                    xalign: 1.0;
+                }
+                margin-end: 12;
+            }
+
+            Label {
+                margin-start: 12;
+                margin-end: 4;
+                use-markup: true;
+                label: "𝐸<sub>1</sub>:";
+            }
+            Frame m1_frame {
+                Label m1_label {
+                    label: "0.0";
+                    selectable: true;
+                    max-width-chars: 5;
+                    width-chars: 5;
+                    xalign: 1.0;
+                }
+            }
+
+            Label {
+                margin-start: 12;
+                margin-end: 4;
+                use-markup: true;
+                label: "𝐸<sub>2</sub>:";
+            }
+            Frame m2_frame {
+                Label m2_label {
+                    label: "0.0";
+                    selectable: true;
+                    max-width-chars: 5;
+                    width-chars: 5;
+                    xalign: 1.0;
+                }
+            }
+
+            Label {
+                margin-start: 12;
+                margin-end: 4;
+                use-markup: true;
+                label: "𝐸<sub>3</sub>:";
+            }
+            Frame m3_frame {
+                Label m3_label {
+                    label: "0.0";
+                    selectable: true;
+                    max-width-chars: 5;
+                    width-chars: 5;
                     xalign: 1.0;
                 }
             }

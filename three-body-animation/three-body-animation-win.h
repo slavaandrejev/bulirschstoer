@@ -14,7 +14,7 @@ public:
     static gi::ref_ptr<MainWindow> new_();
 
 private:
-    void physics_stepped(GLib::Object, double time, double energy);
+    void physics_stepped(GLib::Object, double time, double E, double E1, double E2, double E3);
 
     bool animating = false;
 
@@ -22,4 +22,7 @@ private:
     Gtk::Button start_btn;
     Gtk::Label  time_label;
     Gtk::Label  energy_label;
+    Gtk::Label  m1_label;
+    Gtk::Label  m2_label;
+    Gtk::Label  m3_label;
 };
