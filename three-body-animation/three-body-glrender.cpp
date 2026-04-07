@@ -52,7 +52,13 @@ void OpenGLRender::toggle_animation() {
     }
 }
 
+// Trajectory "vertex" is the 2D location of the body, plus the time the body
+// was there. The time is used for a fading effect. The location coordinates
+// will be transformed to a line strip by the geometry shader to imitate a thick
+// line. The geometry shader will apply antialiasing.
 auto constexpr trace_pnt_size = 3 * sizeof(float);
+// The body "vertex" is just its 2D coordinate. It will be transformed into a
+// small circle inside the geometry and fragment shaders.
 auto constexpr ball_pnt_size  = 2 * sizeof(float);
 
 bool OpenGLRender::render_(Gdk::GLContext context) noexcept {
@@ -62,7 +68,12 @@ bool OpenGLRender::render_(Gdk::GLContext context) noexcept {
     auto scale_x   = get_width()  / scene_width;
     auto scale_y   = get_height() / scene_height;
     auto scale     = std::min(scale_x, scale_y);
-    auto transform = glm::ortho(-float(get_width()) / 2, float(get_width()) / 2, -float(get_height()) / 2, float(get_height()) / 2);
+    auto transform = glm::ortho(
+        -float(get_width()) / 2
+      , float(get_width()) / 2
+      , -float(get_height()) / 2
+      , float(get_height()) / 2
+      );
     transform = glm::scale(transform, glm::vec3{scale});
 
     trace_shader->set("transform", transform);
@@ -71,7 +82,7 @@ bool OpenGLRender::render_(Gdk::GLContext context) noexcept {
 
     trace_shader->set("current_time", float(t * 1000));
     for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
-        if ((buf_heads[i] - buf_tails[i]) > 4 || buf_tails[i] >= buf_heads[i]) {
+        if ((buf_heads[i] - buf_tails[i]) > 4 || buf_tails[i] >= buf_heads[i]) { // check if we have enough vertices to start drawing
             trace_shader->set("line_color", line_colors[i]);
             glBindVertexArray(trace_vao[i]);
             if (buf_heads[i] > buf_tails[i]) {
@@ -123,6 +134,7 @@ void OpenGLRender::realize_() noexcept {
     glCreateVertexArrays(ball_vao.size(), &ball_vao[0]);
     glCreateBuffers(ball_vbo.size(), &ball_vbo[0]);
 
+    // Initialize VAO and VBO for drawing trajectories
     for (auto i = size_t{}; trace_vbo.size() > i; ++i) {
         glNamedBufferStorage(trace_vbo[i], buf_capacity[i] * trace_pnt_size, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
@@ -138,6 +150,7 @@ void OpenGLRender::realize_() noexcept {
 
         glVertexArrayVertexBuffer(trace_vao[i], 0, trace_vbo[i], 0, trace_pnt_size);
     }
+    // Initialize VAO and VBO for drawing orbiting masses
     for (auto i = size_t{}; ball_vbo.size() > i; ++i) {
         glNamedBufferStorage(ball_vbo[i], ball_pnt_size, nullptr, GL_DYNAMIC_STORAGE_BIT);
         glVertexArrayAttribBinding(ball_vao[i], 0, 0);

@@ -137,17 +137,25 @@ private:
     std::unique_ptr<Shader> trace_shader;
     std::unique_ptr<Shader> ball_shader;
 
+    // Vertex arrays and ring buffers to draw the trajectory
     std::array<gl::GLuint, 3> trace_vao = {};
-    std::array<gl::GLuint, 3> trace_vbo = {}; // ring buffers to draw traces
+    std::array<gl::GLuint, 3> trace_vbo = {};
 
+    // Vertex arrays and buffers to draw the orbiting bodies
     std::array<gl::GLuint, 3> ball_vao = {};
     std::array<gl::GLuint, 3> ball_vbo = {};
 
-    std::array<int, 3> buf_heads    = {};
-    std::array<int, 3> buf_tails    = {};
+    // Pointers to the head and the tail of data inside ring buffers
+    std::array<int, 3> buf_heads = {};
+    std::array<int, 3> buf_tails = {};
 
-    static constexpr std::array<int, 3> buf_capacity = {2000, 2000, 2000};
-    static constexpr std::array<int, 3> max_th_dist  = {buf_capacity[0] - 3, buf_capacity[1] - 3, buf_capacity[2] - 3};
+    static
+    constexpr std::array<int, 3> buf_capacity = {2000, 2000, 2000};
+
+    // Because we use GL_LINE_STRIP_ADJACENCY, we need some space inside the
+    // buffers to duplicate some vertices.
+    static
+    constexpr std::array<int, 3> max_th_dist  = {buf_capacity[0] - 3, buf_capacity[1] - 3, buf_capacity[2] - 3};
 
     static constexpr std::array<int, 3> xs_ids = {stid::x1, stid::x2, stid::x3};
     static constexpr std::array<int, 3> ys_ids = {stid::y1, stid::y2, stid::y3};
