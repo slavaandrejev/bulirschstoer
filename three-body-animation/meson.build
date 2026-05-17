@@ -3,7 +3,11 @@ if not bpc.found()
     subproject('blueprint-compiler')
     bpc = find_program('blueprint-compiler')
 endif
-cppgir = find_program('cppgir')
+cppgir = find_program('cppgir', required: false)
+if not cppgir.found()
+    subproject('cppgir', default_options : ['internal_expected=false'])
+    cppgir = find_program('cppgir')
+endif
 
 
 fs    = import('fs')
